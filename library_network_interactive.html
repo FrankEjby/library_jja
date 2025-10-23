@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Library of Juan José de Austria - Interactive Network</title>
+    <script src="https://unpkg.com/vis-network@9.1.2/dist/vis-network.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            color: #eee;
+            overflow: hidden;
+        }
+        
+        #header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px 40px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+            position: relative;
+            z-index: 100;
+        }
+        
+        h1 {
+            font-size: 28px;
+            margin-bottom: 5px;
+        }
+        
+        .subtitle {
+            font-size: 14px;
+            opacity: 0.9;
+        }
+        
+        #controls {
+            background: #16213e;
+            padding: 15px 40px;
+            display: flex;
+            gap: 20px;
+            align-items: center;
+            flex-wrap: wrap;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        }
+        
+        .control-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        label {
+            font-size: 14px;
+            font-weight: 500;
+        }
+        
+        input[type="text"], select {
+            padding: 8px 12px;
+            border: 1px solid #444;
+            border-radius: 4px;
+            background: #0f3460;
+            color: #eee;
+            font-size: 14px;
+            min-width: 200px;
+        }
+        
+        input[type="text"]:focus, select:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.2);
+        }
+        
+        button {
+            padding: 8px 16px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            transition: background 0.2s;
+        }
+        
+        button:hover {
+            background: #5568d3;
+        }
+        
+        button:active {
+            transform: translateY(1px);
+        }
+        
+        #network {
+            width: 100%;
+            height: calc(100vh - 160px);
+            background: #0f3460;
+        }
+        
+        #info-panel {
+            position: absolute;
+            top: 180px;
+            right: 20px;
+            width: 320px;
+            background: rgba(22, 33, 62, 0.95);
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255,255,255,0.1);
+            max-height: calc(100vh - 200px);
+            overflow-y: auto;
+            display: none;
+        }
+        
+        #info-panel.visible {
+            display: block;
+        }
+        
+        #info-panel h3 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 18px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 8px;
+        }
+        
+        #info-panel .detail {
+            margin-bottom: 12px;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        
+        #info-panel .label {
+            color: #999;
+            font-weight: 500;
+            display: block;
+            margin-bottom: 4px;
+        }
+        
+        #info-panel .value {
+            color: #eee;
+        }
+        
+        #info-panel a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        
+        #info-panel a:hover {
+            text-decoration: underline;
+        }
+        
+        .close-btn {
+            position: absolute;
+            top: 15px;
+            right: 15px;
+            background: transparent;
+            color: #999;
+            border: none;
+            font-size: 24px;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            line-height: 1;
+        }
+        
+        .close-btn:hover {
+            color: #fff;
+        }
+        
+        #stats {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 13px;
+            line-height: 1.8;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        #stats .stat {
+            display: flex;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        
+        #stats .stat-label {
+            color: #999;
+        }
+        
+        #stats .stat-value {
+            color: #667eea;
+            font-weight: 600;
+        }
+        
+        #legend {
+            position: absolute;
+            top: 180px;
+            left: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            padding: 15px;
+            border-radius: 8px;
+            font-size: 12px;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        #legend h4 {
+            margin-bottom: 10px;
+            color: #667eea;
+            font-size: 13px;
+        }
+        
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+        }
+        
+        .legend-color {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            border: 2px solid rgba(255,255,255,0.3);
+        }
+        
+        #instructions {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(22, 33, 62, 0.9);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 12px;
+            line-height: 1.8;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
+            border: 1px solid rgba(255,255,255,0.1);
+            max-width: 300px;
+        }
+        
+        #instructions h4 {
+            color: #667eea;
+            margin-bottom: 8px;
+            font-size: 13px;
+        }
+        
+        #instructions ul {
+            list-style: none;
+            padding: 0;
+        }
+        
+        #instructions li {
+            margin-bottom: 5px;
+            padding-left: 15px;
+            position: relative;
+        }
+        
+        #instructions li:before {
+            content: "→";
+            position: absolute;
+            left: 0;
+            color: #667eea;
+        }
+        
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: #667eea;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+    <div id="header">
+        <h1>The Library of Juan José de Austria (1629-1679)</h1>
+        <div class="subtitle">Interactive Network Visualization • 697 Works • 366 Authors • 17th Century Spain</div>
+    </div>
+    
+    <div id="controls">
+        <div class="control-group">
+            <label for="search">Search:</label>
+            <input type="text" id="search" placeholder="Search authors, titles, subjects...">
+        </div>
+        
+        <div class="control-group">
+            <label for="filter">Filter by:</label>
+            <select id="filter">
+                <option value="all">All Network</option>
+                <option value="authors">Authors Only</option>
+                <option value="subjects">Subjects Only</option>
+                <option value="places">Publication Places</option>
+                <option value="top-authors">Top 20 Authors</option>
+            </select>
+        </div>
+        
+        <button onclick="resetView()">Reset View</button>
+        <button onclick="togglePhysics()">Toggle Physics</button>
+        <button onclick="exportImage()">Export Image</button>
+    </div>
+    
+    <div id="network"></div>
+    
+    <div id="info-panel">
+        <button class="close-btn" onclick="closeInfo()">×</button>
+        <div id="info-content"></div>
+    </div>
+    
+    <div id="legend">
+        <h4>Node Types</h4>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #667eea;"></div>
+            <span>Authors</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #f093fb;"></div>
+            <span>Books</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #4ade80;"></div>
+            <span>Subjects</span>
+        </div>
+        <div class="legend-item">
+            <div class="legend-color" style="background: #fbbf24;"></div>
+            <span>Places</span>
+        </div>
+    </div>
+    
+    <div id="stats">
+        <div class="stat">
+            <span class="stat-label">Total Works:</span>
+            <span class="stat-value">697</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Authors:</span>
+            <span class="stat-value">366</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">VIAF Links:</span>
+            <span class="stat-value">366 (52.5%)</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Wikidata Links:</span>
+            <span class="stat-value">128 (18.3%)</span>
+        </div>
+        <div class="stat">
+            <span class="stat-label">Date Range:</span>
+            <span class="stat-value">1512-1679</span>
+        </div>
+    </div>
+    
+    <div id="instructions">
+        <h4>How to Navigate</h4>
+        <ul>
+            <li>Drag to pan the network</li>
+            <li>Scroll to zoom in/out</li>
+            <li>Click nodes for details</li>
+            <li>Drag nodes to rearrange</li>
+            <li>Use search to find items</li>
+        </ul>
+    </div>
+
+    <script>
+        // Sample data - representing the Juan José de Austria library
+        // In production, this would be loaded from your CSV
+        
+        const authors = [
+            {id: 'a1', name: 'Euclides', viaf: '176184097', works: 8, subjects: ['Mathematics', 'Geometry']},
+            {id: 'a2', name: 'Ptolemy', viaf: '54152998', works: 6, subjects: ['Astronomy', 'Geography']},
+            {id: 'a3', name: 'Aristotle', viaf: '7524651', works: 12, subjects: ['Philosophy', 'Natural Science']},
+            {id: 'a4', name: 'Cicero', viaf: '78769600', works: 7, subjects: ['Rhetoric', 'Philosophy']},
+            {id: 'a5', name: 'Seneca', viaf: '90637919', works: 5, subjects: ['Philosophy', 'Ethics']},
+            {id: 'a6', name: 'Virgil', viaf: '8194433', works: 4, subjects: ['Poetry', 'Literature']},
+            {id: 'a7', name: 'Ovid', viaf: '88342447', works: 3, subjects: ['Poetry', 'Mythology']},
+            {id: 'a8', name: 'Pliny the Elder', viaf: '100219416', works: 2, subjects: ['Natural History']},
+            {id: 'a9', name: 'Livy', viaf: '78769532', works: 2, subjects: ['History']},
+            {id: 'a10', name: 'Plutarch', viaf: '268955446', works: 4, subjects: ['Biography', 'Philosophy']},
+            {id: 'a11', name: 'Diego Saavedra Fajardo', viaf: '71395095', works: 3, subjects: ['Politics', 'Emblems']},
+            {id: 'a12', name: 'Luis de Góngora', viaf: '61539567', works: 2, subjects: ['Poetry', 'Literature']},
+            {id: 'a13', name: 'Lope de Vega', viaf: '32002923', works: 5, subjects: ['Theater', 'Poetry']},
+            {id: 'a14', name: 'Francisco de Quevedo', viaf: '61539566', works: 4, subjects: ['Poetry', 'Satire']},
+            {id: 'a15', name: 'Baltasar Gracián', viaf: '9867486', works: 3, subjects: ['Philosophy', 'Rhetoric']},
+            {id: 'a16', name: 'Alonso de Ercilla', viaf: '22193203', works: 1, subjects: ['Poetry', 'Epic']},
+            {id: 'a17', name: 'Garcilaso de la Vega', viaf: '88995958', works: 1, subjects: ['Poetry']},
+            {id: 'a18', name: 'Juan de Mariana', viaf: '71488574', works: 2, subjects: ['History', 'Theology']},
+            {id: 'a19', name: 'Bernardino de Mendoza', viaf: '17231478', works: 2, subjects: ['Military', 'History']},
+            {id: 'a20', name: 'Antonio de Herrera', viaf: '68937911', works: 3, subjects: ['History', 'America']},
+            {id: 'a21', name: 'Jerónimo Zurita', viaf: '51693814', works: 2, subjects: ['History', 'Aragon']},
+            {id: 'a22', name: 'Cristóbal de Castillejo', viaf: '73871825', works: 1, subjects: ['Poetry']},
+            {id: 'a23', name: 'Diego de Covarrubias', viaf: '51701353', works: 2, subjects: ['Law', 'Theology']},
+            {id: 'a24', name: 'Tommaso Campanella', viaf: '9867528', works: 2, subjects: ['Philosophy', 'Utopia']},
+            {id: 'a25', name: 'Giovanni Battista Marino', viaf: '49226693', works: 2, subjects: ['Poetry', 'Baroque']},
+        ];
+        
+        const subjects = [
+            {id: 's1', name: 'Mathematics', count: 45},
+            {id: 's2', name: 'Geometry', count: 38},
+            {id: 's3', name: 'Astronomy', count: 42},
+            {id: 's4', name: 'Military Science', count: 56},
+            {id: 's5', name: 'Fortification', count: 34},
+            {id: 's6', name: 'Philosophy', count: 67},
+            {id: 's7', name: 'Theology', count: 89},
+            {id: 's8', name: 'History', count: 78},
+            {id: 's9', name: 'Poetry', count: 54},
+            {id: 's10', name: 'Rhetoric', count: 31},
+            {id: 's11', name: 'Law', count: 29},
+            {id: 's12', name: 'Medicine', count: 23},
+            {id: 's13', name: 'Geography', count: 28},
+            {id: 's14', name: 'Natural History', count: 19},
+            {id: 's15', name: 'Architecture', count: 21},
+        ];
+        
+        const places = [
+            {id: 'p1', name: 'Madrid', count: 89},
+            {id: 'p2', name: 'Lyon', count: 67},
+            {id: 'p3', name: 'Venice', count: 123},
+            {id: 'p4', name: 'Rome', count: 87},
+            {id: 'p5', name: 'Paris', count: 76},
+            {id: 'p6', name: 'Antwerp', count: 54},
+            {id: 'p7', name: 'Barcelona', count: 34},
+            {id: 'p8', name: 'Seville', count: 45},
+        ];
+        
+        // Create nodes
+        let nodes = [];
+        
+        // Add author nodes
+        authors.forEach(author => {
+            nodes.push({
+                id: author.id,
+                label: author.name,
+                group: 'author',
+                title: `<b>${author.name}</b><br>${author.works} works<br>VIAF: ${author.viaf}`,
+                value: author.works * 3,
+                type: 'author',
+                data: author
+            });
+        });
+        
+        // Add subject nodes
+        subjects.forEach(subject => {
+            nodes.push({
+                id: subject.id,
+                label: subject.name,
+                group: 'subject',
+                title: `<b>${subject.name}</b><br>${subject.count} works`,
+                value: subject.count,
+                type: 'subject',
+                data: subject
+            });
+        });
+        
+        // Add place nodes
+        places.forEach(place => {
+            nodes.push({
+                id: place.id,
+                label: place.name,
+                group: 'place',
+                title: `<b>${place.name}</b><br>${place.count} publications`,
+                value: place.count / 2,
+                type: 'place',
+                data: place
+            });
+        });
+        
+        // Create edges (connections)
+        let edges = [];
+        
+        // Connect authors to their subjects
+        authors.forEach(author => {
+            author.subjects.forEach(subjectName => {
+                const subject = subjects.find(s => s.name === subjectName);
+                if (subject) {
+                    edges.push({
+                        from: author.id,
+                        to: subject.id,
+                        color: {opacity: 0.3}
+                    });
+                }
+            });
+        });
+        
+        // Connect major authors to publication places (sample connections)
+        const authorPlaceConnections = [
+            {author: 'a1', places: ['p3', 'p4']},
+            {author: 'a2', places: ['p3', 'p2']},
+            {author: 'a3', places: ['p3', 'p4', 'p2']},
+            {author: 'a11', places: ['p1', 'p6']},
+            {author: 'a12', places: ['p1']},
+            {author: 'a13', places: ['p1', 'p8']},
+            {author: 'a14', places: ['p1', 'p7']},
+            {author: 'a15', places: ['p1', 'p6']},
+        ];
+        
+        authorPlaceConnections.forEach(conn => {
+            conn.places.forEach(placeId => {
+                edges.push({
+                    from: conn.author,
+                    to: placeId,
+                    color: {opacity: 0.2},
+                    dashes: true
+                });
+            });
+        });
+        
+        // Network configuration
+        const container = document.getElementById('network');
+        const data = {
+            nodes: new vis.DataSet(nodes),
+            edges: new vis.DataSet(edges)
+        };
+        
+        const options = {
+            nodes: {
+                shape: 'dot',
+                scaling: {
+                    min: 10,
+                    max: 40,
+                    label: {
+                        min: 12,
+                        max: 20
+                    }
+                },
+                font: {
+                    size: 14,
+                    color: '#ffffff',
+                    face: 'Segoe UI'
+                },
+                borderWidth: 2,
+                borderWidthSelected: 4
+            },
+            edges: {
+                width: 1,
+                color: {
+                    color: 'rgba(255,255,255,0.2)',
+                    highlight: 'rgba(102,126,234,0.8)'
+                },
+                smooth: {
+                    type: 'continuous',
+                    roundness: 0.5
+                }
+            },
+            groups: {
+                author: {
+                    color: {
+                        background: '#667eea',
+                        border: '#5568d3',
+                        highlight: {
+                            background: '#7c8ef0',
+                            border: '#667eea'
+                        }
+                    }
+                },
+                subject: {
+                    color: {
+                        background: '#f093fb',
+                        border: '#d574e8',
+                        highlight: {
+                            background: '#f5a9fc',
+                            border: '#f093fb'
+                        }
+                    }
+                },
+                place: {
+                    color: {
+                        background: '#fbbf24',
+                        border: '#f59e0b',
+                        highlight: {
+                            background: '#fcd34d',
+                            border: '#fbbf24'
+                        }
+                    }
+                }
+            },
+            physics: {
+                enabled: true,
+                stabilization: {
+                    enabled: true,
+                    iterations: 200
+                },
+                barnesHut: {
+                    gravitationalConstant: -8000,
+                    centralGravity: 0.3,
+                    springLength: 150,
+                    springConstant: 0.04,
+                    damping: 0.09,
+                    avoidOverlap: 0.1
+                }
+            },
+            interaction: {
+                hover: true,
+                tooltipDelay: 100,
+                navigationButtons: true,
+                keyboard: true
+            }
+        };
+        
+        const network = new vis.Network(container, data, options);
+        
+        // Store original data for filtering
+        const originalNodes = nodes;
+        const originalEdges = edges;
+        let physicsEnabled = true;
+        
+        // Click handler to show node details
+        network.on('click', function(params) {
+            if (params.nodes.length > 0) {
+                const nodeId = params.nodes[0];
+                const node = data.nodes.get(nodeId);
+                showNodeInfo(node);
+            }
+        });
+        
+        function showNodeInfo(node) {
+            const panel = document.getElementById('info-panel');
+            const content = document.getElementById('info-content');
+            
+            let html = `<h3>${node.label}</h3>`;
+            
+            if (node.type === 'author') {
+                html += `
+                    <div class="detail">
+                        <span class="label">Type:</span>
+                        <span class="value">Author</span>
+                    </div>
+                    <div class="detail">
+                        <span class="label">Works in Collection:</span>
+                        <span class="value">${node.data.works}</span>
+                    </div>
+                    <div class="detail">
+                        <span class="label">Subjects:</span>
+                        <span class="value">${node.data.subjects.join(', ')}</span>
+                    </div>
+                    <div class="detail">
+                        <span class="label">VIAF ID:</span>
+                        <span class="value"><a href="https://viaf.org/viaf/${node.data.viaf}" target="_blank">${node.data.viaf}</a></span>
+                    </div>
+                `;
+            } else if (node.type === 'subject') {
+                html += `
+                    <div class="detail">
+                        <span class="label">Type:</span>
+                        <span class="value">Subject Category</span>
+                    </div>
+                    <div class="detail">
+                        <span class="label">Works:</span>
+                        <span class="value">${node.data.count}</span>
+                    </div>
+                `;
+            } else if (node.type === 'place') {
+                html += `
+                    <div class="detail">
+                        <span class="label">Type:</span>
+                        <span class="value">Publication Place</span>
+                    </div>
+                    <div class="detail">
+                        <span class="label">Publications:</span>
+                        <span class="value">${node.data.count}</span>
+                    </div>
+                `;
+            }
+            
+            content.innerHTML = html;
+            panel.classList.add('visible');
+        }
+        
+        function closeInfo() {
+            document.getElementById('info-panel').classList.remove('visible');
+        }
+        
+        // Search functionality
+        document.getElementById('search').addEventListener('input', function(e) {
+            const searchTerm = e.target.value.toLowerCase();
+            
+            if (searchTerm === '') {
+                // Reset highlighting
+                const allNodes = data.nodes.get();
+                allNodes.forEach(node => {
+                    data.nodes.update({id: node.id, color: undefined});
+                });
+                return;
+            }
+            
+            // Find matching nodes
+            const allNodes = data.nodes.get();
+            const matchingIds = [];
+            
+            allNodes.forEach(node => {
+                if (node.label.toLowerCase().includes(searchTerm)) {
+                    matchingIds.push(node.id);
+                    data.nodes.update({
+                        id: node.id,
+                        color: {
+                            background: '#4ade80',
+                            border: '#22c55e'
+                        }
+                    });
+                } else {
+                    data.nodes.update({id: node.id, color: undefined});
+                }
+            });
+            
+            // Focus on first match
+            if (matchingIds.length > 0) {
+                network.focus(matchingIds[0], {
+                    scale: 1.5,
+                    animation: {
+                        duration: 500,
+                        easingFunction: 'easeInOutQuad'
+                    }
+                });
+            }
+        });
+        
+        // Filter functionality
+        document.getElementById('filter').addEventListener('change', function(e) {
+            const filterValue = e.target.value;
+            
+            let nodesToShow = [];
+            let edgesToShow = [];
+            
+            switch(filterValue) {
+                case 'all':
+                    data.nodes.clear();
+                    data.nodes.add(originalNodes);
+                    data.edges.clear();
+                    data.edges.add(originalEdges);
+                    break;
+                    
+                case 'authors':
+                    nodesToShow = originalNodes.filter(n => n.type === 'author');
+                    data.nodes.clear();
+                    data.nodes.add(nodesToShow);
+                    data.edges.clear();
+                    break;
+                    
+                case 'subjects':
+                    nodesToShow = originalNodes.filter(n => n.type === 'subject');
+                    const authorNodes = originalNodes.filter(n => n.type === 'author');
+                    nodesToShow = [...nodesToShow, ...authorNodes];
+                    edgesToShow = originalEdges.filter(e => {
+                        const fromNode = originalNodes.find(n => n.id === e.from);
+                        const toNode = originalNodes.find(n => n.id === e.to);
+                        return fromNode && toNode && 
+                               (fromNode.type === 'author' || fromNode.type === 'subject') &&
+                               (toNode.type === 'author' || toNode.type === 'subject');
+                    });
+                    data.nodes.clear();
+                    data.nodes.add(nodesToShow);
+                    data.edges.clear();
+                    data.edges.add(edgesToShow);
+                    break;
+                    
+                case 'places':
+                    nodesToShow = originalNodes.filter(n => n.type === 'place' || n.type === 'author');
+                    edgesToShow = originalEdges.filter(e => {
+                        const fromNode = originalNodes.find(n => n.id === e.from);
+                        const toNode = originalNodes.find(n => n.id === e.to);
+                        return fromNode && toNode && 
+                               (fromNode.type === 'place' || toNode.type === 'place');
+                    });
+                    data.nodes.clear();
+                    data.nodes.add(nodesToShow);
+                    data.edges.clear();
+                    data.edges.add(edgesToShow);
+                    break;
+                    
+                case 'top-authors':
+                    const topAuthors = originalNodes
+                        .filter(n => n.type === 'author')
+                        .sort((a, b) => b.data.works - a.data.works)
+                        .slice(0, 20);
+                    const topSubjects = originalNodes.filter(n => n.type === 'subject');
+                    nodesToShow = [...topAuthors, ...topSubjects];
+                    edgesToShow = originalEdges.filter(e => {
+                        return topAuthors.some(n => n.id === e.from) || 
+                               topAuthors.some(n => n.id === e.to);
+                    });
+                    data.nodes.clear();
+                    data.nodes.add(nodesToShow);
+                    data.edges.clear();
+                    data.edges.add(edgesToShow);
+                    break;
+            }
+            
+            network.fit();
+        });
+        
+        function resetView() {
+            network.fit({
+                animation: {
+                    duration: 500,
+                    easingFunction: 'easeInOutQuad'
+                }
+            });
+        }
+        
+        function togglePhysics() {
+            physicsEnabled = !physicsEnabled;
+            network.setOptions({ physics: { enabled: physicsEnabled } });
+        }
+        
+        function exportImage() {
+            // Note: This requires the network to be fully stabilized
+            const canvas = document.querySelector('#network canvas');
+            const link = document.createElement('a');
+            link.download = 'juan_jose_austria_library_network.png';
+            link.href = canvas.toDataURL();
+            link.click();
+        }
+        
+        // Stabilization progress
+        network.on('stabilizationProgress', function(params) {
+            console.log('Stabilization progress: ' + Math.round(params.iterations/params.total * 100) + '%');
+        });
+        
+        network.on('stabilizationIterationsDone', function() {
+            console.log('Network stabilized');
+        });
+    </script>
+</body>
+</html>
